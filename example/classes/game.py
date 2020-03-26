@@ -1,4 +1,206 @@
-import random
+import np.random as random
+import numpy as np
+
+# This task was quite interesting since it sort of kicked off imagination right from the start and I would have really liked to sort of try to make a game out of it
+# But also it would have been interesting to try to teach it some strategy with machine learning. Probably though I went too fast into it and started writing new code...
+# Good experience though because you really have to sit down and think what is the structure and I so far ended up changing the structure because something somehow didnt anymore seem to work out.
+# I must say I was every now and then dissapointed about how jupyter that we mainly used during our course does dirty hacks in the background and was quite impractical in many ways.
+# This was sort of a welcome sideproject where you didnt have to all the time start some jupyter notebook server and write some scripts instead of being able to write something that is more universal.
+# I really want to see how the sigmoid function and the learning properties I came up with would affect a game. 
+# Idea was that you learn quickly and you learn more when you do either very badly or very well.
+# And another idea I had was that the game was not like typically attack and defense rounds just that you can decide do you do twice attack , both or twice defence and also that you could defend somebody in your team
+#
+#  An attack is first counted in the next round, whereas defence is immideately affecting the round happening. By that one can still react on attacks (that were chosen against you last round) 
+# Anyhow you cannot see anything else but who is attacking you but not if it was succesful
+# Now I have to still move this to my forked branch I hope it will work to just rename the old directory and copy this file accross. Thx for your efford the task was very interesting. 
+# Also it was quite clear what direction this should develop into and there was an example code
+
+class Person:
+    def __init__(self, name,ptypes,mhp,ba,bd,bdam,actions,items,**args):
+        ### This is the basic class that all characters base on, there is hitpoints, but no magick for this base person class(yet)
+        self.maxhp = mhp  # HP of character when it's full
+        self.hp = mhp  # HP during the game will change, but the max HP should stay the same, yet mp is initiallised
+        self.base_attack= ba # basic attack value, not sure maybe they will vanish into some actions
+        self.base_defense=bd # basic defense value, same as ba
+        self.base_damage=bdam#basic damage for attack
+        self.actions=actions #basic actions
+        #["Attack", "Defence","Item",'Fall','Raise','Group'] for example# 
+        #can do action with item(item object contains actions what you can do with it) 
+        #  Also, you can defend yourself or somebody else instead. 
+        # These will be own objects 
+        self.supply = items # items like sword etc. or also ring or wond, contain actions that you automatically learn
+        self.state = []# state list that contains all the states  like on the floor etc
+        self.inhand=[]# object(s?) in hand, normally one
+        self.name = name
+        self.ptypes = ptypes # Ptype is person type with this you can check if an action can be done
+        # here later **args handling
+    def istype(self,type)# Check if person is of certain type. E.g. warrior or Magician
+        for ptype in self.ptypes:
+            if ptype==type:
+                return True
+        return False
+    
+
+class Warrior(Person):
+### for now a Hero has a second hand free for two items but no magick
+### can defend with one hand attack with other or do twice item attack or twice item defense
+### Typically is much better in attack   
+    def __init__(self, name, mhp, ba,bd,action,experience,items,**args)
+        self.inhand2=[]
+        Person.__init__(self, name, mhp, ba,bd,action,experience,items,**args)
+
+class Magician(Person):
+### A Magician has magick energy and can cast spells. Spelling without an item in one hand is difficult 
+### Oterwise he/she can attack/defend also with two hands, though not as efficiently
+   def __init__(self, name, mhp, ba,bd,exp_a,exp_d,items,maxmagic,exp_m,**args)
+        self.maxmagic=maxmagic # maximum magick energy
+        self.magic= maxmagic # actual magick energy
+        self.exp_m = exp_m # basic magick experience
+        Person.__init__(self, name, mhp, ba,bd,exp_a,exp_d,items,**args)
+
+class item:
+    def __init__(self,name,type,mhp,actions,**args):
+    ### basic item class idea is to attach actions that are objects with kind of functions that can be executed
+    ### mhp is the hitpoints it can take until the item itself is destroyed
+    ### idea is to attach it to persons or to ground
+        self.mhp=mhp# maybe later you can attack the weapon and it will take hits
+        self.hp=mhp# actual hitpoints
+        self.bd=bd# basic defense against direct attack,very high (depending on size)such that it is difficult to hit
+        # maybe also triggered with weapons when defense is succesfull 
+        self.actions=actions# actions connected to the item. They are transferred to the person using the item
+        self.name=name
+        self.itype=type
+    def is_item(self,name):# checking name of the item if action requires a specific item
+        return (self.name==name)
+    def is_type(self,type)#checking type of an item, if action requires a specific type
+        return (self.itype==type)
+
+class weapon(item):# weapon item has like the person a base attack and defense
+    def __init__(self,name,type,mhp,actions,ba,bd,bdam,**args):
+        self.base_attack=ba
+        self.base_defense=bd
+        self.base_damage=bdam
+        item.__init__(self,name,type,mhp,actions,**args)
+    pass
+class magick_item(item):# later
+    pass
+
+class action:
+## basic action class function defines mostly the type of action. It is attached first to an item and then passed on to the person using it
+    def __init__(self,name,atype,required,base_experience,sfunction,ffunction,fcalc):
+        self.name=name
+        self.atype=atype# 'attack', 'defense' or 'other'
+        self.required=required
+        #dictionary of {items:[ list of required items or item type] applier_type:[list of person types], applied_to_type: [list of person types]} 
+        #can be also empty, (n,) lists are meant to be concatenated by or to check
+        self.experience=base_experience# experience that comes with the action when applied first time
+    def check_requirements(self,appliers,applied_to):
+        ok=True
+        # check if any of the applier objs (Persons) have the required items
+        for item in required[items]:
+            found=False
+            for person in appliers:
+                if person.hasitem(item)|person.has_item_type(item):
+                    found=True
+                    break
+            if not(found):
+                ok=False
+                break
+        if not(ok):
+            return False
+        else:
+            for ptype in required[appliertype]:
+            found=False
+            for person in appliers:
+                if person.istype(ptype):
+                    found=True
+                    break
+            if not(found):
+                ok=False
+                break
+        if not(ok):
+            return False
+        else:
+            for poitype in required[applied_to_type]:
+            found=False
+            for persoritem in applied_to:
+                if persoritem.istype(poitype):
+                    found=True
+                    break
+            if not(found):
+                ok=False
+                break
+        if not(ok):
+            return False
+        else:
+            return True
+
+
+        # check if any of the applier has the required class
+        pass
+    def execute(self,modifier):
+        # this is the central function to calculate if action was succesful. 
+        # For that a random value is checked against the result of a sigmoid funciton
+        def sigmoid(x):
+            return (1 / (1 + np.exp(-x/20*6)))# sigmoid that is 1 at x=20 and 0 at x=-20
+        value=self.experience.get_value()# read the experience as a basic value
+        value=value+modifier# Modifier used to make it harder or easier. 
+        #E.g. attack is easier if defence of opposite is low and vice versa
+        value_to_exceed=sigmoid(value)
+        rand=np.random.random()
+        success=(rand>value_to_exceed)
+        # learning: always learning but depending on how bad the fail or how splendig the success was
+        if success:
+            self.learn(rand)# The higher the random value the more you learn == splendid action
+        else:
+            self.learn(1-rand)# The lower the random value the more you learn == worst action
+        return (success,rand-value_to_exceed)# return to caller to show success and how good or bad the action was
+ 
+    def learn(self,increment=1)# learning when action was used
+        self.experience.learn(increment)
+##
+
+class experience:
+### experience object is attached to an action and the action stays with the person, even if requirements are not (anymore) fullfilled ,
+# for example the item is lost or dropped or destroyed 
+# experience is a counter that increases
+    def__init__(self,value):
+        self.value=value
+    def learn(self,increment=1):
+        self.value=self.value+increment
+    def get_value(self)
+        return self.value
+### Class diagram use case diagram
+
+
+class game:
+    def __init__(persons):
+        pass
+    def __str__
+    def next_turn():
+        #run one turn and apply the results   
+        pass
+    def check_outcome():
+        # check what happened, did people die
+    def game_end():
+        # game ends, determine who wins for exmample
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# old code below keep it and later modify
+
+
 
 
 class Bcolors:
@@ -11,22 +213,6 @@ class Bcolors:
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
 
-
-class Person:
-    def __init__(self, name, hp, mp, atk, df, magic, items):
-        self.maxhp = hp  # HP of character when it's full
-        self.hp = (
-            hp  # HP during the game will change, but the max HP should stay the same
-        )
-        self.maxmp = mp  # Same like HP
-        self.mp = mp
-        self.atkh = atk + 10
-        self.atkl = atk - 10
-        self.df = df
-        self.magic = magic  # This is and array of dictionaries, each dictionary will contain name, cost and dmg with different value
-        self.action = ["Attack", "Magic", "Items"]
-        self.items = items
-        self.name = name
 
     # Generate the amount of damage randomly in range of highest attack and lowest attack
     def generate_atk_damage(self):
